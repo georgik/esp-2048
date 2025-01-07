@@ -1,0 +1,218 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ESP 2048 Game</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            margin: 0;
+            background-color: #f4f4f4;
+        }
+
+        #game-container {
+            display: grid;
+            grid-template-columns: repeat(4, 100px);
+            grid-gap: 10px;
+            background: #bbada0;
+            padding: 10px;
+            border-radius: 10px;
+        }
+
+        .tile {
+            width: 100px;
+            height: 100px;
+            background: #eee4da;
+            border-radius: 5px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-size: 24px;
+            font-weight: bold;
+        }
+
+        .tile img {
+            max-width: 80%;
+            max-height: 80%;
+            border-radius: 5px;
+        }
+
+        .tile-0 {
+            background: #cdc1b4;
+        }
+
+        .tile-2 {
+            background: #eee4da;
+        }
+
+        .tile-4 {
+            background: #ede0c8;
+        }
+
+        .tile-8 {
+            background: #f2b179;
+        }
+
+        .tile-16 {
+            background: #f59563;
+        }
+
+        .tile-32 {
+            background: #f67c5f;
+        }
+
+        .tile-64 {
+            background: #f65e3b;
+        }
+
+        .tile-128 {
+            background: #edcf72;
+        }
+
+        .tile-256 {
+            background: #edcc61;
+        }
+
+        .tile-512 {
+            background: #edc850;
+        }
+
+        .tile-1024 {
+            background: #edc53f;
+        }
+
+        .tile-2048 {
+            background: #edc22e;
+        }
+    </style>
+</head>
+<body>
+    <div id="game-container"></div>
+
+    <script>
+        // Replace these with your actual image paths for ESP chips and devkits
+        const productImages = {
+            2: "esp8266.png",
+            4: "esp8266-devkitc.png",
+            8: "esp32.png",
+            16: "esp32-devkitc.png",
+            32: "esp32-s2-devkitc.png",
+            64: "esp32-s3-devkitc.png",
+            128: "esp32-s3-eye.png",
+            256: "esp32-s3-lcd-ev-board.png",
+            512: "esp32-s3-usb-otg.png",
+            1024: "esp32-s3-box-3.png",
+            2048: "esp32-p4-function-ev-board.png"
+        };
+
+        const gameContainer = document.getElementById("game-container");
+        const gridSize = 4;
+        let gameState = Array(gridSize * gridSize).fill(0);
+
+        function createTile(value) {
+            const tile = document.createElement("div");
+            tile.classList.add("tile");
+            tile.classList.add(`tile-${value}`);
+            if (value > 0) {
+                const img = document.createElement("img");
+                img.src = "img/" + productImages[value] || "unknown.png";
+                img.alt = value;
+                tile.appendChild(img);
+            }
+            return tile;
+        }
+
+        function render() {
+            gameContainer.innerHTML = "";
+            gameState.forEach(value => {
+                const tile = createTile(value);
+                gameContainer.appendChild(tile);
+            });
+        }
+
+        function slideRow(row) {
+            let filteredRow = row.filter(val => val);
+            let missing = gridSize - filteredRow.length;
+            let zeros = Array(missing).fill(0);
+            return filteredRow.concat(zeros);
+        }
+
+        function combineRow(row) {
+            for (let i = 0; i < row.length - 1; i++) {
+                if (row[i] === row[i + 1] && row[i] !== 0) {
+                    row[i] *= 2;
+                    row[i + 1] = 0;
+                }
+            }
+            return row;
+        }
+
+        function slide(grid) {
+            return grid.map(row => combineRow(slideRow(row)));
+        }
+
+        function rotateGrid(grid) {
+            return grid[0].map((val, index) => grid.map(row => row[index]).reverse());
+        }
+
+        function move(direction) {
+            let rows = [];
+            for (let i = 0; i < gridSize; i++) {
+                rows.push(gameState.slice(i * gridSize, (i + 1) * gridSize));
+            }
+
+            if (direction === "right" || direction === "down") {
+                rows = rows.map(row => row.reverse());
+            }
+
+            if (direction === "up" || direction === "down") {
+                rows = rotateGrid(rows);
+            }
+
+            rows = slide(rows);
+
+            if (direction === "up" || direction === "down") {
+                rows = rotateGrid(rows);
+            }
+
+            if (direction === "right" || direction === "down") {
+                rows = rows.map(row => row.reverse());
+            }
+
+            gameState = rows.flat();
+            spawnTile();
+            render();
+        }
+
+        function spawnTile() {
+            const emptyTiles = gameState.map((value, index) => value === 0 ? index : null).filter(val => val !== null);
+            if (emptyTiles.length > 0) {
+                const randomTile = emptyTiles[Math.floor(Math.random() * emptyTiles.length)];
+                gameState[randomTile] = Math.random() < 0.9 ? 2 : 4;
+            }
+        }
+
+        document.addEventListener("keydown", event => {
+            if (event.key === "ArrowUp") move("up");
+            if (event.key === "ArrowDown") move("down");
+            if (event.key === "ArrowLeft") move("left");
+            if (event.key === "ArrowRight") move("right");
+        });
+
+        function initGame() {
+            gameState = Array(gridSize * gridSize).fill(0);
+            spawnTile();
+            spawnTile();
+            render();
+        }
+
+        initGame();
+    </script>
+</body>
+</html>
+
